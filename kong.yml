@@ -1,0 +1,46 @@
+_format_version: "1.1"
+
+services:
+  - name: auth
+    url: http://auth:3333/
+    routes:
+      - name: user
+        paths:
+        - /clients
+        strip_path: false
+        preserve_host: false
+        methods:
+          - POST
+          - GET
+          - PUT
+          - DELETE
+
+
+consumers:
+  - username: auth
+    custom_id: auth
+    jwt_secrets:
+      - key: auth_key
+        algorithm: HS256
+        secret: secret
+  - username: reset-pass
+    custom_id: reset-pass
+    jwt_secrets:
+      - key: reset-pass_key
+        algorithm: HS256
+        secret: reset_password_secret
+  - username: verify-email
+    custom_id: verify-email
+    jwt_secrets:
+      - key: verify-email_key
+        algorithm: HS256
+        secret: verify_email_secret
+        
+plugins:
+  - name: jwt
+    service: auth
+    enabled: true
+    config:
+      key_claim_name: kid
+      claims_to_verify:
+      - exp

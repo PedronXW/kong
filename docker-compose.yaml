@@ -1,0 +1,66 @@
+version: "3.7"
+
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  kong:
+    container_name: kong
+    image: pedronx/kong
+    deploy:
+      restart_policy:
+        condition: any
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=kong.yml
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
+      - KONG_PROXY_LISTEN=0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_REAL_IP_RECURSIVE=on
+      - KONG_NGINX_HTTP_RESOLVER=8.8.8.8
+      - KONG_PLUGINS=bundled
+    ports:
+      - "8000:8000"
+      - "443:8443"
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "wget", "-O-", "http://kong:8001/status"]
+      interval: 5s
+      retries: 10
+    restart: on-failure
+
+  konga:
+    image: pantsel/konga
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      NODE_ENV: development
+    ports:
+      - "1337:1337"
+
+  auth:
+    image: pedronx/auth
+    container_name: auth
+    restart: always
+    entrypoint: sleep infinity
+    ports: 
+      - 3333:3333
+
+  rabbitmq-cluster:
+      image: pedronx/rabbitmq
+      container_name: rabbitmq-cluster
+      ports: 
+        - 25672:25672
+        - 15672:15672
+      volumes:
+        - /docker_conf/rabbitmq/data/:/var/lib/rabbitmq/
+      environment:
+        - RABBITMQ_DEFAULT_USER = admin
+        - RABBITMQ_DEFAULT_PASS = passw123
+      restart: always
